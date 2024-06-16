@@ -8,10 +8,10 @@ def main():
     st.set_page_config(page_title="Economic Indicators Dashboard", layout="wide")
 
     # Cargar los datos
-    wb_prices = pd.read_excel('Indicadores.xlsx', sheet_name='WB Prices')
-    imae = pd.read_excel('Indicadores.xlsx', sheet_name='IMAE (Act. Eco. Var. Interanual')
-    ivae = pd.read_excel('Indicadores.xlsx', sheet_name='El Salvador (IVAE)')
-    ied = pd.read_excel('Indicadores.xlsx', sheet_name='IED ')
+    wb_prices = pd.read_excel('V3/Indicadores.xlsx', sheet_name='WB Prices')
+    imae = pd.read_excel('V3/Indicadores.xlsx', sheet_name='IMAE (Act. Eco. Var. Interanual')
+    ivae = pd.read_excel('V3/Indicadores.xlsx', sheet_name='El Salvador (IVAE)')
+    ied = pd.read_excel('V3/Indicadores.xlsx', sheet_name='IED ')
     #ipc_var_interanual = pd.read_excel('Indicadores.xlsx', sheet_name='IPC Var Interanual')
     #embi = pd.read_excel('Indicadores.xlsx', sheet_name='EMBI')
 
