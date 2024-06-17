@@ -12,8 +12,8 @@ def main():
     imae = pd.read_excel('V3/Indicadores.xlsx', sheet_name='IMAE (Act. Eco. Var. Interanual')
     ivae = pd.read_excel('V3/Indicadores.xlsx', sheet_name='El Salvador (IVAE)')
     ied = pd.read_excel('V3/Indicadores.xlsx', sheet_name='IED ')
-    #ipc_var_interanual = pd.read_excel('Indicadores.xlsx', sheet_name='IPC Var Interanual')
-    #embi = pd.read_excel('Indicadores.xlsx', sheet_name='EMBI')
+    IPC = pd.read_excel('V3/Indicadores.xlsx', sheet_name='IPC Var Interanual')
+    EMBI = pd.read_excel('V3/Indicadores.xlsx', sheet_name='EMBI')
 
     # Convertir columna 'YM' a formato datetime en 'WB Prices'
     wb_prices['YM'] = pd.to_datetime(wb_prices['YM'], format='%Y-%m')
