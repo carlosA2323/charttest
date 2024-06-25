@@ -14,6 +14,9 @@ def main():
     ied = pd.read_excel('V3/Indicadores.xlsx', sheet_name='IED ')
     IPC = pd.read_excel('V3/Indicadores.xlsx', sheet_name='IPC Var Interanual')
     EMBI = pd.read_excel('V3/Indicadores.xlsx', sheet_name='EMBI')
+    EEUU_PIBT = pd.read_excel('V3/Indicadores.xlsx', sheet_name='EEUU - PIB Trimestral')
+    EEUU_CC = pd.read_excel('V3/Indicadores.xlsx', sheet_name='EEUU - Confianza del Consumidor')
+    EEUU_DS = pd.read_excel('V3/Indicadores.xlsx', sheet_name='EEUU - Desempleo')
 
     # Convertir columna 'YM' a formato datetime en 'WB Prices'
     wb_prices['YM'] = pd.to_datetime(wb_prices['YM'], format='%Y-%m')
@@ -52,8 +55,9 @@ def main():
     else:
         st.error("La hoja 'IED' no contiene la columna 'Year'.")
 
-    st.image("V3/logo_black.jpg", width=200)
+    st.image("logo_black.jpg", width=200)
     
+
 ##############################################################################
     # Título del Dashboard
     st.title("Economic Indicators Dashboard")
@@ -274,7 +278,7 @@ def main():
     st.table(datos_ultima_fecha)
 
 
-###############################################################################
+    ###############################################################################
 
 
     # Ajustar el formato de fechas en EMBI y renombrar columna si es necesario
@@ -325,13 +329,209 @@ def main():
         st.error("La hoja 'El Salvador (EMBI)' no contiene la columna 'Fechas'.")
 
 
+        # Filtrar los datos de la última fecha disponible
+        ultima_fecha = EMBI_filtered['Fecha'].max()
+        datos_ultima_fecha = EMBI_filtered[EMBI_filtered['Fecha'] == ultima_fecha]
+
+        # Mostrar tabla con los datos de la última fecha disponible
+        st.subheader("Datos de la última fecha disponible")
+        st.table(datos_ultima_fecha)
+
+
+    ###############################################################################
+    def convert_to_date(trimestre):
+        if isinstance(trimestre, str) and '_' in trimestre:
+            year, quarter = trimestre.split('_')
+            month = (int(quarter) - 1) * 3 + 3  # Último mes del trimestre
+            return pd.to_datetime(f"{year}-{month:02d}-01", errors='coerce')
+        else:
+            return pd.NaT
+
+    if 'Trimestre' in EEUU_PIBT.columns:
+        EEUU_PIBT['Fecha'] = EEUU_PIBT['Trimestre'].apply(convert_to_date)
+        # Eliminar filas con fechas inválidas
+        EEUU_PIBT = EEUU_PIBT.dropna(subset=['Fecha'])
+        # Eliminar la columna original Trimestre
+        EEUU_PIBT.drop(columns=['Trimestre'], inplace=True)
+        # Reordenar las columnas para que 'Fecha' esté antes de 'Variación Interanual del PIB'
+        cols = ['Fecha', 'Variación Interanual del PIB'] + [col for col in EEUU_PIBT.columns if col not in ['Fecha', 'Variación Interanual del PIB']]
+        EEUU_PIBT = EEUU_PIBT[cols]
+    else:
+        st.error("La columna 'Trimestre' no se encuentra en el DataFrame.")
+
+    # Sección en Streamlit para seleccionar el rango de Trimestre
+    st.header("Seleccione el rango de Trimestre para EEUU PIB Trimestral")
+
+    if 'Fecha' in EEUU_PIBT.columns:
+        # Crear un control deslizante para el rango de Fecha
+        min_date = EEUU_PIBT['Fecha'].min().date()
+        max_date = EEUU_PIBT['Fecha'].max().date()
+        start_date_EEUU_PIBT, end_date_EEUU_PIBT = st.slider(
+            "Rango de Fecha",
+            min_value=min_date,
+            max_value=max_date,
+            value=(min_date, max_date),
+            format="YYYY-MM-DD"
+        )
+        
+        # Convertir las fechas seleccionadas a datetime
+        start_date_EEUU_PIBT = datetime.combine(start_date_EEUU_PIBT, datetime.min.time())
+        end_date_EEUU_PIBT = datetime.combine(end_date_EEUU_PIBT, datetime.min.time())
+
+        # Filtrar los datos basado en el rango seleccionado
+        EEUU_PIBT_filtered = EEUU_PIBT[(EEUU_PIBT['Fecha'] >= start_date_EEUU_PIBT) & 
+                                    (EEUU_PIBT['Fecha'] <= end_date_EEUU_PIBT)]
+
+        st.header("Variación Interanual del PIB Trimestral")
+        st.subheader("Estados Unidos, 2020 a 2024")
+        
+        # Gráfico específico tipo línea para EEUU_PIBT y sus componentes
+        fig = go.Figure()
+        # Corrección para manejar columnas no numéricas y excluir 'Fecha'
+        columns_to_plot = EEUU_PIBT_filtered.columns.difference(['Fecha'])
+        for column in columns_to_plot:
+            # Convertir la columna a numérica, reemplazando valores no numéricos con NaN
+            EEUU_PIBT_filtered[column] = pd.to_numeric(EEUU_PIBT_filtered[column], errors='coerce')
+            fig.add_trace(go.Scatter(x=EEUU_PIBT_filtered['Fecha'], y=EEUU_PIBT_filtered[column], mode='lines', name=column))
+        fig.update_layout(yaxis=dict(title='Valores'))
+
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Filtrar los datos de la última fecha disponible
+        ultima_fecha = EEUU_PIBT_filtered['Fecha'].max()
+        datos_ultima_fecha = EEUU_PIBT_filtered[EEUU_PIBT_filtered['Fecha'] == ultima_fecha]
+
+        # Mostrar tabla con los datos de la última fecha disponible
+        st.subheader("Datos de la última fecha disponible")
+        st.table(datos_ultima_fecha)
+
+
+    ###############################################################################
+
+
+    # Ajustar el formato de fechas en EEUU_CC y renombrar columna si es necesario
+    if 'observation_date' in EEUU_CC.columns or 'Unnamed: 0' in EEUU_CC.columns:
+        EEUU_CC.rename(columns={'Unnamed: 0': 'observation_date'}, inplace=True)
+        EEUU_CC['observation_date'] = pd.to_datetime(EEUU_CC['observation_date'], errors='coerce')
+        EEUU_CC = EEUU_CC.dropna(subset=['observation_date'])
+    else:
+        st.error("La hoja 'EEUU_CC' no contiene la columna 'observation_date'.")
+
+
+    # Sección EEUU_CC
+    st.header("Seleccione el rango de fechas para EEUU Confianza del Consumidor")
+    if 'observation_date' in EEUU_CC.columns:
+        # Crear un control deslizante para el rango de fechas
+        min_date = EEUU_CC['observation_date'].min().date()
+        max_date = EEUU_CC['observation_date'].max().date()
+        start_date_EEUU_CC, end_date_EEUU_CC = st.slider(
+            "Rango de fechas",
+            min_value=min_date,
+            max_value=max_date,
+            value=(min_date, max_date),
+            format="YYYY-MM-DD",
+            key='slider_eeuu_cc'
+        )
+        #start_date_EEUU_CC = st.date_input("Fecha de inicio EEUU_CC", value=EEUU_CC['Fecha'].min(), key='EEUU_CC_start_date')
+        #end_date_EEUU_CC = st.date_input("Fecha de fin EEUU_CC", value=EEUU_CC['Fecha'].max(), key='EEUU_CC_end_date')
+
+        # ¡Aquí se arregla el problema!
+        from datetime import datetime, date
+        start_date_EEUU_CC = datetime.combine(start_date_EEUU_CC, datetime.min.time())
+        end_date_EEUU_CC = datetime.combine(end_date_EEUU_CC, datetime.min.time())
+
+        EEUU_CC_filtered = EEUU_CC[(EEUU_CC['observation_date'] >= start_date_EEUU_CC) & (EEUU_CC['observation_date'] <= end_date_EEUU_CC)]
+
+        st.header("Universidad de Michigan, Sentimiento del Consumidor en EEUU")
+        st.subheader("2014 a 2024, Año Base=1966 Q1")
+        # Gráfico específico tipo línea para EEUU_CC y sus componentes
+        fig = go.Figure()
+        # Corrección para manejar columnas no numéricas
+        EEUU_CC_filtered = EEUU_CC_filtered.loc[:, ~EEUU_CC_filtered.columns.str.contains('^Unnamed')]
+        for column in EEUU_CC_filtered.columns[1:]:
+            # Convertir la columna a numérica, reemplazando valores no numéricos con NaN
+            EEUU_CC_filtered[column] = pd.to_numeric(EEUU_CC_filtered[column], errors='coerce')
+            fig.add_trace(go.Scatter(x=EEUU_CC_filtered['observation_date'], y=EEUU_CC_filtered[column], mode='lines', name=column))
+            fig.update_layout(yaxis=dict(title='Valores'))
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.error("La hoja 'El Salvador (EEUU_CC)' no contiene la columna 'Fechas'.")
+
+
     # Filtrar los datos de la última fecha disponible
-    ultima_fecha = EMBI_filtered['Fecha'].max()
-    datos_ultima_fecha = EMBI_filtered[EMBI_filtered['Fecha'] == ultima_fecha]
+    ultima_fecha = EEUU_CC_filtered['observation_date'].max()
+    datos_ultima_fecha = EEUU_CC_filtered[EEUU_CC_filtered['observation_date'] == ultima_fecha]
+
 
     # Mostrar tabla con los datos de la última fecha disponible
     st.subheader("Datos de la última fecha disponible")
     st.table(datos_ultima_fecha)
+
+
+    ###############################################################################
+
+
+    # Ajustar el formato de fechas en EEUU_DS y renombrar columna si es necesario
+    if 'Month' in EEUU_DS.columns or 'Unnamed: 0' in EEUU_DS.columns:
+        EEUU_DS.rename(columns={'Unnamed: 0': 'Month'}, inplace=True)
+        EEUU_DS['Month'] = pd.to_datetime(EEUU_DS['Month'], errors='coerce')
+        EEUU_DS = EEUU_DS.dropna(subset=['Month'])
+    else:
+        st.error("La hoja 'EEUU_DS' no contiene la columna 'Month'.")
+
+
+    # Sección EEUU_DS
+    st.header("Seleccione el rango de fechas para EEUU Desempleo")
+    if 'Month' in EEUU_DS.columns:
+        # Crear un control deslizante para el rango de fechas
+        min_date = EEUU_DS['Month'].min().date()
+        max_date = EEUU_DS['Month'].max().date()
+        start_date_EEUU_DS, end_date_EEUU_DS = st.slider(
+            "Rango de fechas",
+            min_value=min_date,
+            max_value=max_date,
+            value=(min_date, max_date),
+            format="YYYY-MM-DD",
+            key='slider_eeuu_ds'
+        )
+        #start_date_EEUU_DS = st.date_input("Fecha de inicio EEUU_DS", value=EEUU_DS['Fecha'].min(), key='EEUU_DS_start_date')
+        #end_date_EEUU_DS = st.date_input("Fecha de fin EEUU_DS", value=EEUU_DS['Fecha'].max(), key='EEUU_DS_end_date')
+
+        # ¡Aquí se arregla el problema!
+        from datetime import datetime, date
+        start_date_EEUU_DS = datetime.combine(start_date_EEUU_DS, datetime.min.time())
+        end_date_EEUU_DS = datetime.combine(end_date_EEUU_DS, datetime.min.time())
+
+        EEUU_DS_filtered = EEUU_DS[(EEUU_DS['Month'] >= start_date_EEUU_DS) & (EEUU_DS['Month'] <= end_date_EEUU_DS)]
+
+        st.header("Desempleo en EEUU, Total y Latino")
+        st.subheader("Desde 2014 a 2024")
+        # Gráfico específico tipo línea para EEUU_DS y sus componentes
+        fig = go.Figure()
+        # Corrección para manejar columnas no numéricas
+        EEUU_DS_filtered = EEUU_DS_filtered.loc[:, ~EEUU_DS_filtered.columns.str.contains('^Unnamed')]
+        for column in EEUU_DS_filtered.columns[1:]:
+            # Convertir la columna a numérica, reemplazando valores no numéricos con NaN
+            EEUU_DS_filtered[column] = pd.to_numeric(EEUU_DS_filtered[column], errors='coerce')
+            fig.add_trace(go.Scatter(x=EEUU_DS_filtered['Month'], y=EEUU_DS_filtered[column], mode='lines', name=column))
+            fig.update_layout(yaxis=dict(title='Valores'))
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.error("La hoja 'EEUU - Desempleo' no contiene la columna 'Month'.")
+
+
+    # Filtrar los datos de la última fecha disponible
+    ultima_fecha = EEUU_DS_filtered['Month'].max()
+    datos_ultima_fecha = EEUU_DS_filtered[EEUU_DS_filtered['Month'] == ultima_fecha]
+
+
+    # Mostrar tabla con los datos de la última fecha disponible
+    st.subheader("Datos de la última fecha disponible")
+    st.table(datos_ultima_fecha)
+
+
+    ###############################################################################
+
 
 
 if __name__ == "__main__":
