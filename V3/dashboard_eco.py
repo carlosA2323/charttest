@@ -55,7 +55,7 @@ def main():
     else:
         st.error("La hoja 'IED' no contiene la columna 'Year'.")
 
-    st.image("logo_black.jpg", width=200)
+    st.image("V3/logo_black.jpg", width=200)
     
 
 ##############################################################################
